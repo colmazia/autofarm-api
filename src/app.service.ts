@@ -46,8 +46,10 @@ export class AppService {
     let pools: Array<any> = []
     for (let i = 1; i < 30; i++) {
       let pool = await autofarmContract.poolInfo(i)
-
-      pools.push(await autofarmContract.poolInfo(i))
+      pools.push({
+        poolId: i,
+        tokenAddress: pool[0]
+      })
     }
 
 
