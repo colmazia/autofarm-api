@@ -1,6 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { AppService } from './app.service';
-let pools: Array<any> = []
+
 
 @Controller()
 export class AppController {
@@ -18,14 +18,12 @@ export class AppController {
 
   @Get('autofarm/cache/update')
   async getPoolsInfo(): Promise<any> {
-    if (pools.length === 0) {
-      pools = await this.appService.getPoolsInfo();
-      return {
-        pools: pools
-      }
-    }
-    return {
-      pools: pools
-    }
+      return this.appService.getPoolsInfo();
   }
+
+  @Get('autofarm/:address')
+  getAddressBalance(@Param('address') address: string) {
+    return this.appService.getAddressBalance(address);
+  }
+
 }
