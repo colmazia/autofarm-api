@@ -1,9 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios'
 import { ethers } from "ethers";
 let pools: Array<any> = []
 
 @Injectable()
 export class AppService {
+
+  constructor(private readonly httpService: HttpService) { }
+
   getHello(): string {
     return 'Hello World!';
   }
@@ -44,7 +48,7 @@ export class AppService {
 
     if (pools.length === 0) {
       let poolLength: number = await autofarmContract.poolLength();
-      for (let i = 1; i < 30; i++) {
+      for (let i = 1; i < poolLength; i++) {
         let pool = await autofarmContract.poolInfo(i)
         pools.push({
           poolId: i,
@@ -52,9 +56,8 @@ export class AppService {
         })
       }
     }
-    return {
-      pools: pools
-    }
+    return pools
+
   }
 
   async getAddressBalance(address: string): Promise<any> {
@@ -66,10 +69,12 @@ export class AppService {
 
     let poolLength: number = await autofarmContract.poolLength();
     let farms: Array<any> = []
+    let _poolsInfo = this.getPoolsInfo();
     for (let i = 1; i < poolLength; i++) {
       let farm = await autofarmContract.userInfo(i, address)
       let share = JSON.parse(farm[0])
       if (share > 0) {
+
         farms.push({
           poolId: i,
           balance: share,
@@ -78,5 +83,16 @@ export class AppService {
     }
 
     return farms
+  }
+
+  async getAddressAbi(address: string) {
+    const response = await this.httpService
+      .get(`http://api.bscscan.com/api?module=contract&action=getabi&address=${address}&format=raw`)
+      .toPromise()
+      .catch((err) => {
+        throw new HttpException(err.response.data, err.response.status);
+      });
+
+    return response.data;
   }
 }

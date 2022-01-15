@@ -18,12 +18,19 @@ export class AppController {
 
   @Get('autofarm/cache/update')
   async getPoolsInfo(): Promise<any> {
-      return this.appService.getPoolsInfo();
+    return {
+      pools: this.appService.getPoolsInfo()
+    }
   }
 
   @Get('autofarm/:address')
   getAddressBalance(@Param('address') address: string) {
     return this.appService.getAddressBalance(address);
   }
+
+  // @Get('abi/:address')
+  // getTestAPI(@Param('address') address: string): any {
+  //   return this.appService.getAddressAbi(address);
+  // }
 
 }
