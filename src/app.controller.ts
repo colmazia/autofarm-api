@@ -19,7 +19,7 @@ export class AppController {
   @Get('autofarm/cache/update')
   async getPoolsInfo(): Promise<any> {
     return {
-      pools: this.appService.getPoolsInfo()
+      pools: await this.appService.getPoolsInfo()
     }
   }
 
