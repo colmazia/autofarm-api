@@ -1,45 +1,12 @@
-import { Injectable, HttpException } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios'
-import { BigNumber, ethers } from "ethers";
-import { autofarmAbi, PancakeLPAbi, cakeAbi } from './abi'
+import { Injectable } from '@nestjs/common';
+import { ethers } from "ethers";
+import { autofarmAbi, PancakeLPAbi, cakeAbi } from './resources/abi'
+// import { pools } from './resources/pools_for_test'
+
 let pools: Array<any> = []
-// import { pools } from './pools_for_test'
 
 @Injectable()
 export class AppService {
-
-  constructor(private readonly httpService: HttpService) { }
-
-  getHello(): string {
-    return 'Hello World!';
-  }
-
-  async getTestEth(): Promise<string> {
-    const provider = ethers.getDefaultProvider();
-    const daiAddress = "dai.tokens.ethers.eth";
-
-    // The ERC-20 Contract ABI, which is a common contract interface
-    // for tokens (this is the Human-Readable ABI format)
-    const daiAbi = [
-      // Some details about the token
-      "function name() view returns (string)",
-      "function symbol() view returns (string)",
-
-      // Get the account balance
-      "function balanceOf(address) view returns (uint)",
-
-      // Send some of your tokens to someone else
-      "function transfer(address to, uint amount)",
-
-      // An event triggered whenever anyone transfers to someone else
-      "event Transfer(address indexed from, address indexed to, uint amount)"
-    ];
-
-    // The Contract object
-    const daiContract = new ethers.Contract(daiAddress, daiAbi, provider)
-
-    return await daiContract.name()
-  }
 
   async getPoolsInfo(): Promise<any> {
     // provide the needed information and create a contract object
@@ -160,15 +127,4 @@ export class AppService {
       })
     }
   }
-
-  // async getAddressAbi(address: string): Promise<string> {
-  //   const response = await this.httpService
-  //     .get(`http://api.bscscan.com/api?module=contract&action=getabi&address=${address}&format=raw`)
-  //     .toPromise()
-  //     .catch((err) => {
-  //       throw new HttpException(err.response.data, err.response.status);
-  //     });
-
-  //   return response.data;
-  // }
 }
