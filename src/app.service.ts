@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios'
 import { BigNumber, ethers } from "ethers";
 import { autofarmAbi, PancakeLPAbi, cakeAbi } from './abi'
 let pools: Array<any> = []
+// import { pools } from './pools_for_test'
 
 @Injectable()
 export class AppService {
@@ -48,19 +49,13 @@ export class AppService {
 
     if (pools.length === 0) {
       let poolLength: number = await autofarmContract.poolLength();
-      // for (let i = 1; i < poolLength; i++) {
-      //   let pool = await autofarmContract.poolInfo(i)
-      //   pools.push({
-      //     poolId: i,
-      //     tokenAddress: pool[0]
-      //   })
-      // }
 
-      const testPools = [150, 560]
-      for (let i = 0; i < testPools.length; i++) {
-        let pool = await autofarmContract.poolInfo(testPools[i])
+      const testPools = [46, 150, 560]
+      for (let i = 1; i < poolLength; i++) {
+        const poolId = i
+        let pool = await autofarmContract.poolInfo(poolId)
         pools.push({
-          poolId: testPools[i],
+          poolId: poolId,
           tokenAddress: pool[0]
         })
       }
@@ -82,17 +77,22 @@ export class AppService {
     let _poolsInfo = await this.getPoolsInfo();
 
 
-    const testPools = [150, 560]
-    for (let i = 0; i < testPools.length; i++) {
-      const poolId = testPools[i]
-      let amount = await autofarmContract.stakedWantTokens(poolId, address)
-      if (amount > 0) {
-        const currentPool = _poolsInfo.find(obj => {
-          return obj.poolId === poolId
-        })
-        // const tokenAbi = await this.getAddressAbi(currentPool.tokenAddress)
-        const rewardsAmount = (await autofarmContract.pendingAUTO(poolId, address)) / (10 ** 18)
-        farms.push(await this.getFarmInfo(currentPool.tokenAddress, provider, amount, rewardsAmount))
+    const testPools = [46, 150, 560]
+    for (let i = 1; i < poolLength; i++) {
+      const poolId = i
+      try {
+        let amount = await autofarmContract.stakedWantTokens(poolId, address)
+        if (amount > 0) {
+          const currentPool = _poolsInfo.find(obj => {
+            return obj.poolId === poolId
+          })
+          // const tokenAbi = await this.getAddressAbi(currentPool.tokenAddress)
+          const rewardsAmount = (await autofarmContract.pendingAUTO(poolId, address)) / (10 ** 18)
+          farms.push(await this.getFarmInfo(currentPool.tokenAddress, provider, amount, rewardsAmount))
+        }
+      }
+      catch (e) {
+        console.log(e.message)
       }
     }
 
@@ -161,14 +161,14 @@ export class AppService {
     }
   }
 
-  async getAddressAbi(address: string): Promise<string> {
-    const response = await this.httpService
-      .get(`http://api.bscscan.com/api?module=contract&action=getabi&address=${address}&format=raw`)
-      .toPromise()
-      .catch((err) => {
-        throw new HttpException(err.response.data, err.response.status);
-      });
+  // async getAddressAbi(address: string): Promise<string> {
+  //   const response = await this.httpService
+  //     .get(`http://api.bscscan.com/api?module=contract&action=getabi&address=${address}&format=raw`)
+  //     .toPromise()
+  //     .catch((err) => {
+  //       throw new HttpException(err.response.data, err.response.status);
+  //     });
 
-    return response.data;
-  }
+  //   return response.data;
+  // }
 }
