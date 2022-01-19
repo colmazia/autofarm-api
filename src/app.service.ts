@@ -91,7 +91,8 @@ export class AppService {
           return obj.poolId === poolId
         })
         // const tokenAbi = await this.getAddressAbi(currentPool.tokenAddress)
-        farms.push(await this.getFarmInfo(currentPool.tokenAddress, provider, amount))
+        const rewardsAmount = (await autofarmContract.pendingAUTO(poolId, address)) / (10 ** 18)
+        farms.push(await this.getFarmInfo(currentPool.tokenAddress, provider, amount, rewardsAmount))
       }
     }
 
@@ -100,7 +101,7 @@ export class AppService {
     }
   }
 
-  async getFarmInfo(tokenAddress: string, provider, amount) {
+  async getFarmInfo(tokenAddress: string, provider, amount, rewardsAmount) {
     try {
       // try assume that it is LP-token
       const LPtokenContract = new ethers.Contract(tokenAddress, PancakeLPAbi, provider)
@@ -126,7 +127,13 @@ export class AppService {
         ],
         balance: amount / (10 ** (await LPtokenContract.decimals())),
         lpAddress: tokenAddress,
-        rewards: [],
+        rewards: [
+          {
+            symbol: "AUTO",
+            address: "0xa184088a740c695e156f91f5cc086a06bb78b827",
+            balance: rewardsAmount
+          }
+        ],
         poolAddress: 0x0895196562C7868C5Be92459FaE7f877ED450452
       })
     } catch (e) {
@@ -142,7 +149,13 @@ export class AppService {
         ],
         balance: amount / (10 ** (await tokenContract.decimals())),
         lpAddress: tokenAddress,
-        rewards: [],
+        rewards: [
+          {
+            symbol: "AUTO",
+            address: "0xa184088a740c695e156f91f5cc086a06bb78b827",
+            balance: rewardsAmount
+          }
+        ],
         poolAddress: 0x0895196562C7868C5Be92459FaE7f877ED450452
       })
     }
