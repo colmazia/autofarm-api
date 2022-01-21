@@ -1,71 +1,181 @@
 import { Injectable } from '@nestjs/common';
 import { ethers } from "ethers";
 import { autofarmAbi, PancakeLPAbi, cakeAbi } from './resources/abi'
+import { Worker } from "worker_threads"
 // import { pools } from './resources/pools_for_test'
 
-let pools: Array<any> = []
+const threadPools = []
+const threadFarms = new Map()
+const farmsVisited = new Map()
+const maximumThread = 4
+let isPoolsInfoCalled = false
 
 @Injectable()
 export class AppService {
 
+  // async getPoolsInfo(): Promise<any> {
+  //   // provide the needed information and create a contract object
+  //   const provider = ethers.getDefaultProvider('https://bsc-dataseed.binance.org/');
+  //   const autofarmAddress = '0x0895196562C7868C5Be92459FaE7f877ED450452';
+  //   const autofarmContract = new ethers.Contract(autofarmAddress, autofarmAbi, provider)
+
+  //   if (pools.length === 0) {
+  //     let poolLength: number = await autofarmContract.poolLength();
+
+  //     const testPools = [46, 150, 560]
+  //     for (let i = 1; i < poolLength; i++) {
+  //       const poolId = i
+  //       let pool = await autofarmContract.poolInfo(poolId)
+  //       pools.push({
+  //         poolId: poolId,
+  //         tokenAddress: pool[0]
+  //       })
+  //     }
+  //   }
+
+  //   return pools
+
+  // }
+
   async getPoolsInfo(): Promise<any> {
-    // provide the needed information and create a contract object
+
     const provider = ethers.getDefaultProvider('https://bsc-dataseed.binance.org/');
     const autofarmAddress = '0x0895196562C7868C5Be92459FaE7f877ED450452';
     const autofarmContract = new ethers.Contract(autofarmAddress, autofarmAbi, provider)
+    const poolLength: number = await autofarmContract.poolLength();
 
-    if (pools.length === 0) {
-      let poolLength: number = await autofarmContract.poolLength();
-
-      const testPools = [46, 150, 560]
-      for (let i = 1; i < poolLength; i++) {
-        const poolId = i
-        let pool = await autofarmContract.poolInfo(poolId)
-        pools.push({
-          poolId: poolId,
-          tokenAddress: pool[0]
-        })
-      }
+    if (isPoolsInfoCalled) {
+      return threadPools
     }
-
-    return pools
-
+    isPoolsInfoCalled = true;
+    for (let threadIdx = 0; threadIdx < maximumThread; threadIdx++) {
+      const worker1 = new Worker("./dist/threads/poolsThread.js", {
+        workerData: {
+          begin: threadIdx === 0 ? 1 : Math.floor(poolLength * threadIdx / maximumThread),
+          end: Math.floor(poolLength * (threadIdx + 1) / maximumThread)
+        }
+      });
+      worker1.on("message", (value) => {
+        threadPools.push(value);
+        console.log(`message received from thread ${threadIdx} : `, value);
+      })
+      worker1.on("exit", () => {
+        console.log(`Closing ${threadIdx}`);
+      });
+    }
+    return threadPools
   }
 
-  async getAddressBalance(address: string): Promise<any> {
+  // async getAddressBalance(address: string): Promise<any> {
+  //   // provide the needed information and create a contract object
+  //   const provider = ethers.getDefaultProvider('https://bsc-dataseed.binance.org/');
+  //   const autofarmAddress = '0x0895196562C7868C5Be92459FaE7f877ED450452';
+  //   const autofarmContract = new ethers.Contract(autofarmAddress, autofarmAbi, provider)
+
+  //   const poolLength: number = await autofarmContract.poolLength();
+  //   let _poolsInfo = await this.getPoolsInfo();
+  //   if (threadFarms.get(address) === undefined) {
+  //     threadFarms.set(address, [])
+  //   }
+  //   const farms = []
+
+
+  //   const testPools = [46, 150, 560]
+  //   for (let i = 1; i < poolLength; i++) {
+  //     const poolId = i
+  //     try {
+  //       let amount = await autofarmContract.stakedWantTokens(poolId, address)
+  //       if (amount > 0) {
+  //         const currentPool = _poolsInfo.find(obj => {
+  //           return obj.poolId === poolId
+  //         })
+  //         // const tokenAbi = await this.getAddressAbi(currentPool.tokenAddress)
+  //         const rewardsAmount = (await autofarmContract.pendingAUTO(poolId, address)) / (10 ** 18)
+  //         farms.push(await this.getFarmInfo(currentPool.tokenAddress, provider, amount, rewardsAmount))
+  //       }
+  //     }
+  //     catch (e) {
+  //       console.log(e.message)
+  //     }
+  //   }
+
+  //   return {
+  //     farms: farms
+  //   }
+  // }
+
+  async testAddressBalance(address: string): Promise<any> {
     // provide the needed information and create a contract object
     const provider = ethers.getDefaultProvider('https://bsc-dataseed.binance.org/');
     const autofarmAddress = '0x0895196562C7868C5Be92459FaE7f877ED450452';
-    const autofarmAbi = [{ "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "user", "type": "address" }, { "indexed": true, "internalType": "uint256", "name": "pid", "type": "uint256" }, { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "Deposit", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "user", "type": "address" }, { "indexed": true, "internalType": "uint256", "name": "pid", "type": "uint256" }, { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "EmergencyWithdraw", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" }], "name": "OwnershipTransferred", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "user", "type": "address" }, { "indexed": true, "internalType": "uint256", "name": "pid", "type": "uint256" }, { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "Withdraw", "type": "event" }, { "inputs": [], "name": "AUTO", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "AUTOMaxSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "AUTOPerBlock", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "AUTOv2", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_allocPoint", "type": "uint256" }, { "internalType": "contract IERC20", "name": "_want", "type": "address" }, { "internalType": "bool", "name": "_withUpdate", "type": "bool" }, { "internalType": "address", "name": "_strat", "type": "address" }], "name": "add", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "burnAddress", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }, { "internalType": "uint256", "name": "_wantAmt", "type": "uint256" }], "name": "deposit", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }], "name": "emergencyWithdraw", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_from", "type": "uint256" }, { "internalType": "uint256", "name": "_to", "type": "uint256" }], "name": "getMultiplier", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "_token", "type": "address" }, { "internalType": "uint256", "name": "_amount", "type": "uint256" }], "name": "inCaseTokensGetStuck", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "massUpdatePools", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_inputAmt", "type": "uint256" }], "name": "migrateToAUTOv2", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "ownerAUTOReward", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }, { "internalType": "address", "name": "_user", "type": "address" }], "name": "pendingAUTO", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "name": "poolInfo", "outputs": [{ "internalType": "contract IERC20", "name": "want", "type": "address" }, { "internalType": "uint256", "name": "allocPoint", "type": "uint256" }, { "internalType": "uint256", "name": "lastRewardBlock", "type": "uint256" }, { "internalType": "uint256", "name": "accAUTOPerShare", "type": "uint256" }, { "internalType": "address", "name": "strat", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "poolLength", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }, { "internalType": "uint256", "name": "_allocPoint", "type": "uint256" }, { "internalType": "bool", "name": "_withUpdate", "type": "bool" }], "name": "set", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }, { "internalType": "address", "name": "_user", "type": "address" }], "name": "stakedWantTokens", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "startBlock", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "totalAllocPoint", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }], "name": "updatePool", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }, { "internalType": "address", "name": "", "type": "address" }], "name": "userInfo", "outputs": [{ "internalType": "uint256", "name": "shares", "type": "uint256" }, { "internalType": "uint256", "name": "rewardDebt", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }, { "internalType": "uint256", "name": "_wantAmt", "type": "uint256" }], "name": "withdraw", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "_pid", "type": "uint256" }], "name": "withdrawAll", "outputs": [], "stateMutability": "nonpayable", "type": "function" }]
     const autofarmContract = new ethers.Contract(autofarmAddress, autofarmAbi, provider)
 
     const poolLength: number = await autofarmContract.poolLength();
-    let farms: Array<any> = []
-    let _poolsInfo = await this.getPoolsInfo();
-
-
-    const testPools = [46, 150, 560]
-    for (let i = 1; i < poolLength; i++) {
-      const poolId = i
-      try {
-        let amount = await autofarmContract.stakedWantTokens(poolId, address)
-        if (amount > 0) {
-          const currentPool = _poolsInfo.find(obj => {
-            return obj.poolId === poolId
+    const poolsInfo = await this.getPoolsInfo();
+    if (threadFarms.get(address) === undefined) {
+      threadFarms.set(address, [])
+      farmsVisited.set(address, [])
+    }
+    console.log('farmsVisted', farmsVisited.get(address))
+    for (let threadIdx = 0; threadIdx < maximumThread; threadIdx++) {
+      const worker = new Worker("./dist/threads/farmBalanceThread.js", {
+        workerData: {
+          begin: threadIdx === 0 ? 1 : Math.floor(poolLength * threadIdx / maximumThread),
+          end: Math.floor(poolLength * (threadIdx + 1) / maximumThread),
+          address: address,
+          poolsInfo: poolsInfo,
+          farmsVisited: farmsVisited.get(address)
+        }
+      });
+      worker.on("message", (value) => {
+        if (Number.isInteger(value)) {
+          farmsVisited.get(address).push(value)
+        }
+        else {
+          const currentFarm = threadFarms.get(address).find(obj => {
+            return obj.poolId === value.poolId
           })
-          // const tokenAbi = await this.getAddressAbi(currentPool.tokenAddress)
-          const rewardsAmount = (await autofarmContract.pendingAUTO(poolId, address)) / (10 ** 18)
-          farms.push(await this.getFarmInfo(currentPool.tokenAddress, provider, amount, rewardsAmount))
+          if (currentFarm === undefined) {
+            threadFarms.get(address).push(value);
+            console.log(`Farm Thread ${threadIdx} message: `, value);
+          }
+        }
+      })
+      worker.on("exit", () => {
+        console.log("Closing 1");
+      });
+    }
+    const worker1 = new Worker("./dist/threads/farmBalanceThread.js", {
+      workerData: {
+        begin: 150,
+        end: 170,
+        address: address,
+        poolsInfo: poolsInfo,
+        farmsVisited: farmsVisited.get(address)
+      }
+    });
+    worker1.on("message", (value) => {
+      if (Number.isInteger(value)) {
+        farmsVisited.get(address).push(value)
+      }
+      else {
+        const currentFarm = threadFarms.get(address).find(obj => {
+          return obj.poolId === value.poolId
+        })
+        if (currentFarm === undefined) {
+          threadFarms.get(address).push(value);
+          console.log("=================================================\nmessage received from thread farms 1: ", value);
         }
       }
-      catch (e) {
-        console.log(e.message)
-      }
-    }
+    })
+    worker1.on("exit", () => {
+      console.log("Closing 1");
+    });
 
     return {
-      farms: farms
+      farms: threadFarms.get(address)
     }
+
   }
 
   async getFarmInfo(tokenAddress: string, provider, amount, rewardsAmount) {
@@ -101,7 +211,7 @@ export class AppService {
             balance: rewardsAmount
           }
         ],
-        poolAddress: 0x0895196562C7868C5Be92459FaE7f877ED450452
+        poolAddress: "0x0895196562C7868C5Be92459FaE7f877ED450452"
       })
     } catch (e) {
       // if it catch an error, that means it is single token
