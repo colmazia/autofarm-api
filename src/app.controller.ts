@@ -18,7 +18,7 @@ export class AppController {
 
   @Get('autofarm/:address')
   getAddressBalance(@Param('address') address: string) {
-    return this.appService.testAddressBalance(address);
+    return this.appService.getAddressBalance(address);
   }
 
 }

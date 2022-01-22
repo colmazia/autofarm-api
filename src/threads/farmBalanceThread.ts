@@ -2,34 +2,29 @@ import { parentPort, workerData } from "worker_threads"
 import { ethers } from "ethers"
 import { autofarmAbi, cakeAbi, PancakeLPAbi } from "src/resources/abi"
 
+// create contract
 const provider = ethers.getDefaultProvider('https://bsc-dataseed.binance.org/');
 const autofarmAddress = '0x0895196562C7868C5Be92459FaE7f877ED450452';
 const autofarmContract = new ethers.Contract(autofarmAddress, autofarmAbi, provider)
 
-async function getAddressBalanceInrange() {
+async function getAddressBalanceInRange() {
     const _poolsInfo = workerData.poolsInfo
-    for (let i = workerData.begin; i < workerData.end; i++) {
-        const poolId = i
+    for (let poolId = workerData.begin; poolId < workerData.end; poolId++) {
         try {
-            const currentFarm = workerData.farmsVisited.find(obj => {
-                return obj === poolId
-            })
             const currentPool = _poolsInfo.find(obj => {
                 return obj.poolId === poolId
             })
-            if (currentFarm !== undefined || currentPool === undefined) {
-                console.log('this should continue', workerData.farmsVisited)
+            // skip if there is no pool info for current farm
+            if (currentPool === undefined) {
                 continue;
             }
-            parentPort.postMessage(poolId)
+            // retrieve farm info
+            console.log('there is pool info for pool: ', poolId)
             let amount = await autofarmContract.stakedWantTokens(poolId, workerData.address)
             if (amount > 0) {
-                console.log('enter this route with', poolId)
-
-                // const tokenAbi = await this.getAddressAbi(currentPool.tokenAddress)
-                console.log('and also enter this route with', poolId)
+                console.log('there is balance for pool: ', poolId)
                 const rewardsAmount = (await autofarmContract.pendingAUTO(poolId, workerData.address)) / (10 ** 18)
-                const farm = await getFarmInfo(currentPool.tokenAddress, provider, amount, rewardsAmount, poolId)
+                const farm = await getFarmInfo(currentPool.tokenAddress, amount, rewardsAmount, poolId)
                 parentPort.postMessage(farm)
 
             }
@@ -40,7 +35,7 @@ async function getAddressBalanceInrange() {
     }
 }
 
-async function getFarmInfo(tokenAddress: string, provider, amount, rewardsAmount, poolId) {
+async function getFarmInfo(tokenAddress: string, amount, rewardsAmount, poolId) {
     try {
         // try assume that it is LP-token
         const LPtokenContract = new ethers.Contract(tokenAddress, PancakeLPAbi, provider)
@@ -74,7 +69,7 @@ async function getFarmInfo(tokenAddress: string, provider, amount, rewardsAmount
                     balance: rewardsAmount
                 }
             ],
-            poolAddress: 0x0895196562C7868C5Be92459FaE7f877ED450452
+            poolAddress: "0x0895196562C7868C5Be92459FaE7f877ED450452"
         })
     } catch (e) {
         // if it catch an error, that means it is single token
@@ -96,9 +91,9 @@ async function getFarmInfo(tokenAddress: string, provider, amount, rewardsAmount
                     balance: rewardsAmount
                 }
             ],
-            poolAddress: 0x0895196562C7868C5Be92459FaE7f877ED450452
+            poolAddress: "0x0895196562C7868C5Be92459FaE7f877ED450452"
         })
     }
 }
 
-getAddressBalanceInrange()
+getAddressBalanceInRange()
